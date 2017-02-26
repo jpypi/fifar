@@ -31,6 +31,7 @@ classes = 10
 x  = tf.placeholder(tf.float32, shape=[None, 3*1024])
 y_ = tf.placeholder(tf.int64, shape=[None])
 one_hot_y_ = tf.one_hot(y_, 10, dtype=tf.int32)
+keep_prob = tf.placeholder(tf.float32)
 
 x_image = tf.reshape(tf.transpose(tf.reshape(x, [-1, 3, 1024]), [0, 2, 1]),
                      [-1, 32, 32, 3])
@@ -53,17 +54,19 @@ W_conv_3 = weight_variable([4, 4, 96, 48])
 b_conv_3 = bias_variable([48])
 conv_3 = tf.nn.elu(conv_2d(pool_1, W_conv_3) + b_conv_3)
 
-# Reduce image size to 4x4
-pool_2 = max_pool_3x3(conv_3)
-pool_2_flat = tf.reshape(pool_2, [-1, 4*4*48])
+## Reduce image size to 4x4
+#pool_2 = max_pool_3x3(conv_3)
+#pool_2_flat = tf.reshape(pool_2, [-1, 4*4*48])
+pool_2_flat = tf.reshape(conv_3, [-1, 9*9*48])
 
-W_full_1  = weight_variable([4*4*48, 600])
+W_full_1  = weight_variable([9*9*48, 600])
 b_full_1 = bias_variable([600])
 full_1 = tf.nn.elu(tf.matmul(pool_2_flat, W_full_1) + b_full_1)
+full_1_drop = tf.nn.dropout(full_1, keep_prob)
 
 W_full_2 = weight_variable([600, 10])
 b_full_2 = bias_variable([10])
-out = tf.nn.elu(tf.matmul(full_1, W_full_2) + b_full_2)
+out = tf.nn.elu(tf.matmul(full_1_drop, W_full_2) + b_full_2)
 
 
 cross_entropy = tf.reduce_mean(
@@ -73,8 +76,8 @@ is_correct_prediction = tf.equal(tf.argmax(out, 1), y_)
 accuracy = tf.reduce_mean(tf.cast(is_correct_prediction, tf.float32))
 
 # Compute gradients, compute parameter changes, and update parameters
-#train_step = tf.train.AdadeltaOptimizer().minimize(cross_entropy)
-train_step = tf.train.AdamOptimizer(1e-5).minimize(cross_entropy)
+train_step = tf.train.AdadeltaOptimizer(1e-5).minimize(cross_entropy)
+#train_step = tf.train.AdamOptimizer(1e-3).minimize(cross_entropy)
 
 # The session
 sess = tf.Session()
@@ -95,16 +98,17 @@ labels = np.array(data[b"labels"])
 # This can be used to find the new dimms after various layers
 #print(pool_2.get_shape())
 
-for epoch in range(10000):
-    batch_indicies = np.random.choice(images.shape[0], 50, replace=False)
+for epoch in range(20000):
+    batch_indicies = np.random.choice(images.shape[0], 100, replace=False)
     batch_x = images[batch_indicies]
     batch_y = labels[batch_indicies]
 
     if epoch%100 == 0:
         train_accuracy = sess.run(accuracy, feed_dict={x : batch_x,
-                                                       y_: batch_y})
+                                                       y_: batch_y,
+                                                       keep_prob: 1.0})
         print("Epoch %d: %g"%(epoch, train_accuracy))
 
-    sess.run(train_step, feed_dict={x : batch_x, y_: batch_y})
+    sess.run(train_step, feed_dict={x : batch_x, y_: batch_y, keep_prob: 0.5})
 
 print(time.time() - start)
