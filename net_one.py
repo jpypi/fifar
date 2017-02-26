@@ -35,8 +35,6 @@ one_hot_y_ = tf.one_hot(y_, 10, dtype=tf.int32)
 x_image = tf.reshape(tf.transpose(tf.reshape(x, [-1, 3, 1024]), [0, 2, 1]),
                      [-1, 32, 32, 3])
 
-#x_image = tf.reshape(x, [-1, 32, 32, 3])
-
 # Reduce image size to 29x29
 W_conv_1 = weight_variable([4, 4, 3, 64])
 b_conv_1 = bias_variable([64])
@@ -72,9 +70,11 @@ cross_entropy = tf.reduce_mean(
         tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_y_, logits=out))
 
 is_correct_prediction = tf.equal(tf.argmax(out, 1), y_)
+accuracy = tf.reduce_mean(tf.cast(is_correct_prediction, tf.float32))
 
 # Compute gradients, compute parameter changes, and update parameters
-train_step = tf.train.AdadeltaOptimizer().minimize(cross_entropy)
+#train_step = tf.train.AdadeltaOptimizer().minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(1e-5).minimize(cross_entropy)
 
 # The session
 sess = tf.Session()
@@ -84,7 +84,7 @@ sess.run(tf.global_variables_initializer())
 start = time.time()
 
 
-path = "/mnt/general/cifar-10-batches-py/data_batch_1"
+path = "cifar-10/data_batch_1"
 f = open(path, "rb")
 data = pickle.load(f, encoding="bytes")
 f.close()
@@ -95,17 +95,16 @@ labels = np.array(data[b"labels"])
 # This can be used to find the new dimms after various layers
 #print(pool_2.get_shape())
 
-for epoch in range(4):
+for epoch in range(10000):
     batch_indicies = np.random.choice(images.shape[0], 50, replace=False)
     batch_x = images[batch_indicies]
     batch_y = labels[batch_indicies]
 
     if epoch%100 == 0:
-        pass
-#        train_accuracy =
+        train_accuracy = sess.run(accuracy, feed_dict={x : batch_x,
+                                                       y_: batch_y})
+        print("Epoch %d: %g"%(epoch, train_accuracy))
 
-    sess.run(train_step, feed_dict={x : batch_x,
-                                    y_: batch_y})
-#                                    keep_prob: 0.5})
+    sess.run(train_step, feed_dict={x : batch_x, y_: batch_y})
 
 print(time.time() - start)
