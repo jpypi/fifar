@@ -47,23 +47,23 @@ W_conv_2 = weight_variable([4, 4, 64, 96])
 b_conv_2 = bias_variable([96])
 conv_2 = tf.nn.elu(conv_2d(conv_1, W_conv_2) + b_conv_2)
 
-# Reduce image size to 13x13 (12,12 apparently?)
+# Reduce image size to 12x12
 pool_1 = max_pool_3x3(conv_2)
 
-# Reduce image size to 10x10 (9,9 aparently)
+# Reduce image size to 9x9
 W_conv_3 = weight_variable([4, 4, 96, 48])
 b_conv_3 = bias_variable([48])
 conv_3 = tf.nn.elu(conv_2d(pool_1, W_conv_3) + b_conv_3)
 
-# Reduce image size to 5x5 (4x4 aparently)
+# Reduce image size to 4x4
 pool_2 = max_pool_3x3(conv_3)
-pool_2_flat = tf.reshape(pool_2, [-1, 1200])
+pool_2_flat = tf.reshape(pool_2, [-1, 4*4*48])
 
-W_full_1  = weight_variable([1200, 800])
-b_full_1 = bias_variable([800])
+W_full_1  = weight_variable([4*4*48, 600])
+b_full_1 = bias_variable([600])
 full_1 = tf.nn.elu(tf.matmul(pool_2_flat, W_full_1) + b_full_1)
 
-W_full_2 = weight_variable([800, 10])
+W_full_2 = weight_variable([600, 10])
 b_full_2 = bias_variable([10])
 out = tf.nn.elu(tf.matmul(full_1, W_full_2) + b_full_2)
 
@@ -92,8 +92,10 @@ f.close()
 images = np.array(data[b"data"])
 labels = np.array(data[b"labels"])
 
-print(pool_2.get_shape())
-for epoch in range(1):
+# This can be used to find the new dimms after various layers
+#print(pool_2.get_shape())
+
+for epoch in range(4):
     batch_indicies = np.random.choice(images.shape[0], 50, replace=False)
     batch_x = images[batch_indicies]
     batch_y = labels[batch_indicies]
@@ -102,8 +104,8 @@ for epoch in range(1):
         pass
 #        train_accuracy =
 
-#    sess.run(train_step, feed_dict={x : batch_x,
-#                                    y_: batch_y})
+    sess.run(train_step, feed_dict={x : batch_x,
+                                    y_: batch_y})
 #                                    keep_prob: 0.5})
 
 print(time.time() - start)
