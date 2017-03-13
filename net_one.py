@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+
+from input_data import load_cifar10
+
 import time
-import pickle
 import numpy as np
 import tensorflow as tf
 
@@ -29,12 +31,10 @@ image_size = 32*32
 classes = 10
 
 x  = tf.placeholder(tf.float32, shape=[None, 3*1024])
-y_ = tf.placeholder(tf.int64, shape=[None])
-one_hot_y_ = tf.one_hot(y_, 10, dtype=tf.int32)
+y_ = tf.placeholder(tf.int64, shape=[None, 10])
 keep_prob = tf.placeholder(tf.float32)
 
-x_image = tf.reshape(tf.transpose(tf.reshape(x, [-1, 3, 1024]), [0, 2, 1]),
-                     [-1, 32, 32, 3])
+x_image = tf.reshape(x, [-1, 32, 32, 3])
 
 # Reduce image size to 29x29
 W_conv_1 = weight_variable([4, 4, 3, 64])
@@ -70,14 +70,14 @@ out = tf.nn.elu(tf.matmul(full_1_drop, W_full_2) + b_full_2)
 
 
 cross_entropy = tf.reduce_mean(
-        tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_y_, logits=out))
+        tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=out))
 
-is_correct_prediction = tf.equal(tf.argmax(out, 1), y_)
+is_correct_prediction = tf.equal(tf.argmax(out, 1), tf.argmax(y_, 1))
 accuracy = tf.reduce_mean(tf.cast(is_correct_prediction, tf.float32))
 
 # Compute gradients, compute parameter changes, and update parameters
-train_step = tf.train.AdadeltaOptimizer(1e-5).minimize(cross_entropy)
-#train_step = tf.train.AdamOptimizer(1e-3).minimize(cross_entropy)
+#train_step = tf.train.AdadeltaOptimizer(0.01).minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(1e-3).minimize(cross_entropy)
 
 # The session
 sess = tf.Session()
@@ -87,28 +87,22 @@ sess.run(tf.global_variables_initializer())
 start = time.time()
 
 
-path = "cifar-10/data_batch_1"
-f = open(path, "rb")
-data = pickle.load(f, encoding="bytes")
-f.close()
-#images = data[b"data"].reshape((-1,3,1024)).transpose((0,2,1)).reshape((-1,32,32,3))
-images = np.array(data[b"data"])
-labels = np.array(data[b"labels"])
+path = "cifar-10"
+train, valid, test = load_cifar10(path)
 
 # This can be used to find the new dimms after various layers
 #print(pool_2.get_shape())
 
-for epoch in range(20000):
-    batch_indicies = np.random.choice(images.shape[0], 100, replace=False)
-    batch_x = images[batch_indicies]
-    batch_y = labels[batch_indicies]
+while train.epochs_completed < 10000:
+    curr_epoch = train.epochs_completed
+    while curr_epoch == train.epochs_completed:
+        batch_x, batch_y = train.next_batch(200, True)
+        sess.run(train_step, feed_dict={x : batch_x, y_: batch_y, keep_prob: 0.5})
+    valid_x, valid_y = valid.next_batch(1000,False)
+    train_accuracy = sess.run(accuracy, feed_dict={x : valid_x,
+                                                   y_: valid_y,
+                                                   keep_prob: 1.0})
+    print("Epoch %d: %g"%(train.epochs_completed, train_accuracy))
 
-    if epoch%100 == 0:
-        train_accuracy = sess.run(accuracy, feed_dict={x : batch_x,
-                                                       y_: batch_y,
-                                                       keep_prob: 1.0})
-        print("Epoch %d: %g"%(epoch, train_accuracy))
-
-    sess.run(train_step, feed_dict={x : batch_x, y_: batch_y, keep_prob: 0.5})
 
 print(time.time() - start)
