@@ -30,16 +30,14 @@ def max_pool_3x3(x):
 image_size = 32*32
 classes = 10
 
-x  = tf.placeholder(tf.float32, shape=[None, 3*1024])
+x  = tf.placeholder(tf.float32, shape=[None, 32, 32, 3])
 y_ = tf.placeholder(tf.int64, shape=[None, 10])
 keep_prob = tf.placeholder(tf.float32)
-
-x_image = tf.reshape(x, [-1, 32, 32, 3])
 
 # Reduce image size to 29x29
 W_conv_1 = weight_variable([4, 4, 3, 64])
 b_conv_1 = bias_variable([64])
-conv_1 = tf.nn.elu(conv_2d(x_image, W_conv_1) + b_conv_1)
+conv_1 = tf.nn.elu(conv_2d(x, W_conv_1) + b_conv_1)
 
 # Reduce image size to 26x26
 W_conv_2 = weight_variable([4, 4, 64, 96])

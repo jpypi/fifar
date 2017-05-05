@@ -32,17 +32,23 @@ def load_cifar10(data_path):
     train_data = np.concatenate((train_data, train3[b'data']), axis=0)
     train_target = np.concatenate((train_target, dense_to_one_hot(train3[b'labels'], 10)), axis=0)
 
+    #Reshape the dataset so the dimensions are more convenient
+    train_data = train_data.reshape(-1,3,32,32).transpose(0,2,3,1)
+
     train = DataSet(train_data, train_target)
 
     validate1 = unpickle(path.join(data_path, 'data_batch_4'))
     valid_data = validate1[b'data']
     valid_target = dense_to_one_hot(validate1[b'labels'], 10)
 
+    valid_data = valid_data.reshape(-1,3,32,32).transpose(0,2,3,1)
     validation = DataSet(valid_data, valid_target)
 
     test1 = unpickle(path.join(data_path, 'test_batch'))
     test_data = test1[b'data']
     test_target = dense_to_one_hot(test1[b'labels'], 10)
+
+    test_data = test_data.reshape(-1,3,32,32).transpose(0,2,3,1)
     test = DataSet(test_data, test_target)
 
     return Datasets(train=train, validation=validation, test=test)
