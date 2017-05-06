@@ -59,22 +59,22 @@ def dense_to_one_hot(labels_dense, num_classes):
     """Convert class labels from scalars to one-hot vectors."""
     if type(labels_dense) != np.ndarray:
         labels_dense = np.asarray(labels_dense)
+
     num_labels = labels_dense.shape[0]
     index_offset = np.arange(num_labels) * num_classes
     labels_one_hot = np.zeros((num_labels, num_classes))
     labels_one_hot.flat[index_offset + labels_dense.ravel()] = 1
+
     return labels_one_hot
 
 
 def unpickle(path):
-    fo = open(path, 'rb')
-    dict = pickle.load(fo, encoding='bytes')
-    fo.close()
-    return dict
+    with open(path, 'rb') as f:
+        return pickle.load(f, encoding='bytes')
+
 
 #Dataset class taken shamelessly from tensorflow's MNIST tutorial files
 class DataSet(object):
-
     def __init__(self,
                  images,
                  labels,
