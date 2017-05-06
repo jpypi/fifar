@@ -64,7 +64,7 @@ full_1_drop = tf.nn.dropout(full_1, keep_prob)
 
 W_full_2 = weight_variable([600, 10])
 b_full_2 = bias_variable([10])
-out = tf.nn.elu(tf.matmul(full_1_drop, W_full_2) + b_full_2)
+out = tf.matmul(full_1_drop, W_full_2) + b_full_2
 
 
 cross_entropy = tf.reduce_mean(
