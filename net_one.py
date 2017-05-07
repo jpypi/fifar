@@ -160,13 +160,13 @@ def train():
             xs, ys = train_data.next_batch(100)
             k = FLAGS.dropout
         else:
-            xs, ys = valid_data.next_batch(1000)
+            xs, ys = valid_data.next_batch(2500)
             k = 1.0
         return {x: xs, y_: ys, keep_prob: k}
 
 
     for i in range(FLAGS.max_steps):
-        if i % 100 == 0: # Record summaries and valid-set accuracy
+        if i % 400 == 0: # Record summaries and valid-set accuracy
             summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(False))
             test_writer.add_summary(summary, i)
             print('Validation accuracy at step %s: %s' % (i, acc))
@@ -181,10 +181,12 @@ def train():
                 train_writer.add_run_metadata(run_metadata, 'step%03d' % i)
                 train_writer.add_summary(summary, i)
                 print('Adding run metadata for', i)
-            else: # Record a summary
+            elif i % 100 == 0: # Record a summary
+                summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))
+                train_writer.add_summary(summary, i)
+            else:
                 sess.run([train_step], feed_dict=feed_dict(True))
-                #summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(True))
-                #train_writer.add_summary(summary, i)
+
     train_writer.close()
     test_writer.close()
 
