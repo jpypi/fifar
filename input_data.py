@@ -20,6 +20,7 @@ def load_cifar10(data_path):
     Returns:
         Datasets tuple containing the train, validation, and test datasets
     """
+
     train1 = unpickle(path.join(data_path, 'data_batch_1'))
     train_data = train1[b'data']
     train_target = dense_to_one_hot(train1[b'labels'], 10)
@@ -32,7 +33,7 @@ def load_cifar10(data_path):
     train_data = np.concatenate((train_data, train3[b'data']), axis=0)
     train_target = np.concatenate((train_target, dense_to_one_hot(train3[b'labels'], 10)), axis=0)
 
-    train_data = train_data.reshape(-1, 32*32*3)
+    train_data = preprocess_fn(train_data)
 
     train = DataSet(train_data, train_target)
 
@@ -40,7 +41,7 @@ def load_cifar10(data_path):
     valid_data = validate1[b'data']
     valid_target = dense_to_one_hot(validate1[b'labels'], 10)
 
-    valid_data = valid_data.reshape(-1, 32*32*3)
+    valid_data = preprocess_fn(valid_data)
 
     validation = DataSet(valid_data, valid_target)
 
@@ -48,11 +49,25 @@ def load_cifar10(data_path):
     test_data = test1[b'data']
     test_target = dense_to_one_hot(test1[b'labels'], 10)
 
-    test_data = test_data.reshape(-1, 32*32*3)
+    test_data = preprocess_fn(test_data)
 
     test = DataSet(test_data, test_target)
 
     return Datasets(train=train, validation=validation, test=test)
+
+def preprocess_fn(image_array):
+    '''Turn a single, contiguous array of image data into a
+    [num_samples, 32, 32, 3] numpy array,
+    each pixel mean centered around 0'''
+    images = image_array.reshape(-1, 3, 32, 32)
+    #Get the per-pixel means (across channels)
+    means = np.mean(images, axis=1)
+    #Dim is [-1, 32, 32], expand so we can broadcast
+    means = np.expand_dims(means, axis=1)
+
+    images = images - means
+
+    return images.transpose(0,2,3,1)
 
 
 def dense_to_one_hot(labels_dense, num_classes):
@@ -75,38 +90,16 @@ def unpickle(path):
 
 #Dataset class taken shamelessly from tensorflow's MNIST tutorial files
 class DataSet(object):
+
     def __init__(self,
                  images,
-                 labels,
-                 dtype=dtypes.float32,
-                 normalize=True,
-                 reshape=True):
-        """Construct a DataSet.
-        'dtype' can either be 'uint8' to leave the input as '[0, 255]', or 'float32'
-        to rescale into '[0, 1]'.
-        """
-        dtype = dtypes.as_dtype(dtype).base_dtype
-        if dtype not in (dtypes.uint8, dtypes.float32):
-            raise TypeError('Invalid image dtype %r, expected uint8 or float32' %
-                    dtype)
+                 labels):
+        """Construct a DataSet."""
 
         assert images.shape[0] == labels.shape[0], (
                 'images.shape: %s labels.shape: %s' % (images.shape, labels.shape))
+
         self._num_examples = images.shape[0]
-
-
-        if dtype == dtypes.float32:
-            # Convert from [0, 255] -> [0.0, 1.0]
-            images = images.astype(np.float32)
-            images = np.multiply(images, 1.0 / 255.0)
-
-        if normalize:
-            images = self.preprocess(images)
-
-        # Convert shape from [num_examples, rows*columns*channels] to
-        # [num_examples, rows, columns, channels]
-        if reshape:
-            images = images.reshape(-1, 3, 32, 32).transpose(0,2,3,1)
 
         self._images = images
         self._labels = labels
@@ -128,12 +121,6 @@ class DataSet(object):
     @property
     def epochs_completed(self):
         return self._epochs_completed
-
-    def preprocess(self,images):
-        '''Normalize the data.'''
-        sub_mean = np.subtract(images, np.mean(images, axis=0))
-        div_std = np.divide(sub_mean, np.std(sub_mean, axis=0))
-        return div_std
 
     def next_batch(self, batch_size, shuffle=True):
         '''Return the next 'batch_size' examples from this data set.'''
