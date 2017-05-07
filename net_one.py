@@ -160,7 +160,7 @@ def train():
             xs, ys = train_data.next_batch(100)
             k = FLAGS.dropout
         else:
-            xs, ys = valid_data.next_batch(2500)
+            xs, ys = valid_data.next_batch(750)
             k = 1.0
         return {x: xs, y_: ys, keep_prob: k}
 
