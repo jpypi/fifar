@@ -128,6 +128,20 @@ class DataSet(object):
     def epochs_completed(self):
         return self._epochs_completed
 
+    def augment(self, images, labels, train=True):
+        '''Augment the images with label-preserving transformations.
+        If train is false, return a deterministic subset of transformations
+        for testing.'''
+        #images are [-1, 32, 32, 3]
+
+        #Flip horizontally
+        images_flipped = np.flip(np.copy(images), axis=2)
+        labels_flipped = np.copy(labels)
+
+        return np.concatenate([images, images_flipped], axis=0), \
+               np.concatenate([labels, labels_flipped], axis=0)
+
+
     def next_batch(self, batch_size, shuffle=True):
         '''Return the next 'batch_size' examples from this data set.'''
 
@@ -158,10 +172,11 @@ class DataSet(object):
             end = self._index_in_epoch
             images_new_part = self._images[start:end]
             labels_new_part = self._labels[start:end]
-            return np.concatenate((images_rest_part, images_new_part), axis=0), \
-                   np.concatenate((labels_rest_part, labels_new_part), axis=0)
+            images = np.concatenate((images_rest_part, images_new_part), axis=0)
+            labels = np.concatenate((labels_rest_part, labels_new_part), axis=0)
+            return self.augment(images, labels)
         else:
             self._index_in_epoch += batch_size
             end = self._index_in_epoch
-            return self._images[start:end], self._labels[start:end]
+            return self.augment(self._images[start:end], self._labels[start:end])
 
