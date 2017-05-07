@@ -59,13 +59,19 @@ def preprocess_fn(image_array):
     '''Turn a single, contiguous array of image data into a
     [num_samples, 32, 32, 3] numpy array,
     each pixel mean centered around 0'''
-    images = image_array.reshape(-1, 3, 32, 32)
-    #Get the per-pixel means (across channels)
-    means = np.mean(images, axis=1)
-    #Dim is [-1, 32, 32], expand so we can broadcast
-    means = np.expand_dims(means, axis=1)
+    #Scale to [0,1]
+    images = np.multiply(image_array, 1.0 / 255.0)
 
-    images = images - means
+    images = images - np.mean(images, axis=0)
+
+    images = images.reshape(-1, 3, 32, 32)
+
+    #Get the per-pixel means (across channels)
+    #means = np.mean(images, axis=1)
+    #Dim is [-1, 32, 32], expand so we can broadcast
+    #means = np.expand_dims(means, axis=1)
+
+    #images = images - means
 
     return images.transpose(0,2,3,1)
 
